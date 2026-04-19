@@ -2,7 +2,7 @@ FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    curl ca-certificates git unzip && \
+    curl ca-certificates git unzip nodejs npm && \
     rm -rf /var/lib/apt/lists/*
 
 # Install hermes-agent
@@ -11,9 +11,13 @@ RUN git clone --depth 1 https://github.com/NousResearch/hermes-agent.git /tmp/he
     uv pip install --system --no-cache -e ".[all]" && \
     rm -rf /tmp/hermes-agent/.git
 
+# Build hermes web UI
+RUN cd /tmp/hermes-agent/web 2>/dev/null && \
+    npm install && npm run build || true
+
 # Install bun + gbrain
 RUN curl -fsSL https://bun.sh/install | bash && \
-    export PATH="$HOME/.bun/bin:$PATH" && \
+    export PATH="/root/.bun/bin:$PATH" && \
     git clone --depth 1 https://github.com/garrytan/gbrain.git /opt/gbrain && \
     cd /opt/gbrain && \
     /root/.bun/bin/bun install && \
