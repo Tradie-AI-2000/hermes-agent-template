@@ -37,4 +37,6 @@ RUN chmod +x /app/start.sh
 ENV HOME=/data
 ENV HERMES_HOME=/data/.hermes
 
+ENV HERMES_SKIP_WEB_BUILD=1
+
 CMD ["/app/start.sh"]
