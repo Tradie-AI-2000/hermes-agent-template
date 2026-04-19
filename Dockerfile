@@ -1,25 +1,25 @@
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
 
-# Node.js is required only at build time to compile the Hermes React dashboard.
-# We strip the source + apt lists afterwards to keep the image lean.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl ca-certificates git && \
-    curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
-    apt-get install -y --no-install-recommends nodejs && \
+    apt-get install -y --no-install-recommends \
+    curl ca-certificates git unzip && \
     rm -rf /var/lib/apt/lists/*
 
-# Install hermes-agent (provides the `hermes` CLI) and pre-build its React
-# dashboard so `hermes dashboard` has nothing to build at runtime.
-# Deleting web/ afterwards makes hermes's internal _build_web_ui skip the
-# rebuild step (it early-returns when package.json is absent), so container
-# startup is fast and no runtime npm dependency is needed.
-RUN git clone --depth 1 https://github.com/NousResearch/hermes-agent.git /opt/hermes-agent && \
-    cd /opt/hermes-agent && \
+# Install hermes-agent
+RUN git clone --depth 1 https://github.com/NousResearch/hermes-agent.git /tmp/hermes-agent && \
+    cd /tmp/hermes-agent && \
     uv pip install --system --no-cache -e ".[all]" && \
-    cd /opt/hermes-agent/web && \
-    npm install --silent && \
-    npm run build && \
-    rm -rf /opt/hermes-agent/web /opt/hermes-agent/.git /root/.npm
+    rm -rf /tmp/hermes-agent/.git
+
+# Install bun + gbrain
+RUN curl -fsSL https://bun.sh/install | bash && \
+    export PATH="$HOME/.bun/bin:$PATH" && \
+    git clone --depth 1 https://github.com/garrytan/gbrain.git /opt/gbrain && \
+    cd /opt/gbrain && \
+    /root/.bun/bin/bun install && \
+    /root/.bun/bin/bun link
+
+ENV PATH="/root/.bun/bin:$PATH"
 
 COPY requirements.txt /app/requirements.txt
 RUN uv pip install --system --no-cache -r /app/requirements.txt
