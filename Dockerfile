@@ -5,26 +5,22 @@ RUN apt-get update && \
     curl ca-certificates git unzip nodejs npm && \
     rm -rf /var/lib/apt/lists/*
 
-# Install hermes-agent
 RUN git clone --depth 1 https://github.com/NousResearch/hermes-agent.git /tmp/hermes-agent && \
     cd /tmp/hermes-agent && \
     uv pip install --system --no-cache -e ".[all]" && \
     rm -rf /tmp/hermes-agent/.git
 
-# Build hermes web UI
 RUN cd /tmp/hermes-agent/web 2>/dev/null && \
     npm install && npm run build || true
 
-# Install bun + gbrain
 RUN curl -fsSL https://bun.sh/install | bash && \
-    export PATH="/root/.bun/bin:$PATH" && \
     git clone --depth 1 https://github.com/garrytan/gbrain.git /opt/gbrain && \
     cd /opt/gbrain && \
     /root/.bun/bin/bun install && \
     /root/.bun/bin/bun link
 
-# Symlink gbrain to system PATH so it's accessible at runtime
-RUN ln -sf /root/.bun/bin/gbrain /usr/local/bin/gbrain
+RUN ln -sf /root/.bun/bin/bun /usr/local/bin/bun && \
+    ln -sf /root/.bun/bin/gbrain /usr/local/bin/gbrain
 
 ENV PATH="/root/.bun/bin:$PATH"
 
