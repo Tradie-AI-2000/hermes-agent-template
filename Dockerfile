@@ -23,6 +23,9 @@ RUN curl -fsSL https://bun.sh/install | bash && \
     /root/.bun/bin/bun install && \
     /root/.bun/bin/bun link
 
+# Symlink gbrain to system PATH so it's accessible at runtime
+RUN ln -sf /root/.bun/bin/gbrain /usr/local/bin/gbrain
+
 ENV PATH="/root/.bun/bin:$PATH"
 
 COPY requirements.txt /app/requirements.txt
