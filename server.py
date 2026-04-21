@@ -13,8 +13,8 @@ SPA's plain fetch() calls do not reliably include basic-auth creds across browse
 and basic-auth's per-directory protection space forced separate prompts for
 /setup and /. Cookies auto-include on every same-origin request, so both the
 setup UI and the proxied dashboard work with a single login. The cookie signing
-secret is regenerated on every process start, so any ADMIN_PASSWORD change on
-Railway (which triggers a redeploy) invalidates all existing sessions.
+secret is derived from ADMIN_PASSWORD, so sessions survive container restarts
+and are invalidated only when the admin password actually changes.
 
 First-visit behavior: if no provider+model config exists, GET / redirects to /setup.
 Once configured, / proxies to the Hermes dashboard. A small "← Setup" widget is
@@ -238,15 +238,18 @@ def unmask(new: dict[str, str], existing: dict[str, str]) -> dict[str, str]:
 # Cookies are auto-included on every same-origin request (navigation + XHR)
 # so both the setup UI and the proxied Hermes dashboard work with one login.
 #
-# The SECRET is regenerated on every process start. That means any ADMIN_PASSWORD
-# change via Railway → redeploy → all existing cookies invalidate → users re-login.
+# The SECRET is derived from ADMIN_PASSWORD so sessions persist across restarts
+# (a Railway redeploy no longer logs everyone out). Changing ADMIN_PASSWORD still
+# rotates the secret, which invalidates all prior cookies — the intended behavior.
+# When ADMIN_PASSWORD is unset, it's auto-generated per process (see above), so
+# the derived secret still rotates on each start in that case.
 import hashlib as _hashlib
 import hmac as _hmac
 from urllib.parse import quote as _url_quote, urlparse as _urlparse
 
 COOKIE_NAME = "hermes_auth"
 COOKIE_MAX_AGE = 7 * 86400  # 7 days
-COOKIE_SECRET = secrets.token_bytes(32)
+COOKIE_SECRET = _hashlib.sha256(b"hermes-cookie-v1:" + ADMIN_PASSWORD.encode()).digest()
 
 # Public paths — no auth required. Everything else is behind the cookie gate.
 PUBLIC_PATHS = {"/health", "/login", "/logout"}
